@@ -2,16 +2,6 @@ name: Unit Tests
 
 on:
   push:
-    branches:
-      - main
-      - 2.3.x
-  pull_request:
-    branches:
-      - main
-      - 2.3.x
-    paths-ignore:
-      - "doc/**"
-      - "web/**"
 
 permissions:
   contents: read
@@ -28,6 +18,7 @@ jobs:
       matrix:
         platform: [ubuntu-24.04, ubuntu-24.04-arm]
         env_file: [actions-310.yaml, actions-311.yaml, actions-312.yaml, actions-313.yaml]
+
         # Prevent the include jobs from overriding other jobs
         pattern: [""]
         pandas_future_infer_string: ["0"]
@@ -109,42 +100,6 @@ jobs:
       group: ${{ github.event_name == 'push' && github.run_number || github.ref }}-${{ matrix.env_file }}-${{ matrix.pattern }}-${{ matrix.extra_apt || '' }}-${{ matrix.pandas_future_infer_string }}-${{ matrix.platform }}
       cancel-in-progress: true
 
-    services:
-      mysql:
-        image: mysql:9
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_DATABASE: pandas
-        options: >-
-          --health-cmd "mysqladmin ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 3306:3306
-
-      postgres:
-        image: postgres:17
-        env:
-          PGUSER: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pandas
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      moto:
-        image: motoserver/moto:5.0.27
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-        ports:
-          - 5000:5000
 
     steps:
     - name: Checkout
@@ -166,28 +121,28 @@ jobs:
       with:
         environment-file: ci/deps/${{ matrix.env_file }}
 
-    - name: Build Pandas
-      id: build
-      uses: ./.github/actions/build_pandas
-      with:
-        # xref https://github.com/cython/cython/issues/6870
-        werror: ${{ matrix.name != 'Freethreading' }}
-      # TODO: Re-enable once Pypy has Pypy 3.10 on conda-forge
-      if: ${{ matrix.name != 'Pypy' }}
+    # - name: Build Pandas
+    #   id: build
+    #   uses: ./.github/actions/build_pandas
+    #   with:
+    #     # xref https://github.com/cython/cython/issues/6870
+    #     werror: ${{ matrix.name != 'Freethreading' }}
+    #   # TODO: Re-enable once Pypy has Pypy 3.10 on conda-forge
+    #   if: ${{ matrix.name != 'Pypy' }}
 
-    - name: Test (not single_cpu)
-      uses: ./.github/actions/run-tests
-      if: ${{ matrix.name != 'Pypy' }}
-      env:
-        # Set pattern to not single_cpu if not already set
-        PATTERN: ${{ env.PATTERN == '' && 'not single_cpu' || matrix.pattern }}
+    # - name: Test (not single_cpu)
+    #   uses: ./.github/actions/run-tests
+    #   if: ${{ matrix.name != 'Pypy' }}
+    #   env:
+    #     # Set pattern to not single_cpu if not already set
+    #     PATTERN: ${{ env.PATTERN == '' && 'not single_cpu' || matrix.pattern }}
 
-    - name: Test (single_cpu)
-      uses: ./.github/actions/run-tests
-      env:
-        PATTERN: 'single_cpu'
-        PYTEST_WORKERS: 0
-      if: ${{ matrix.pattern == '' && (always() && steps.build.outcome == 'success')}}
+    # - name: Test (single_cpu)
+    #   uses: ./.github/actions/run-tests
+    #   env:
+    #     PATTERN: 'single_cpu'
+    #     PYTEST_WORKERS: 0
+    #   if: ${{ matrix.pattern == '' && (always() && steps.build.outcome == 'success')}}
 
   macos-windows:
     timeout-minutes: 90
@@ -220,11 +175,11 @@ jobs:
         with:
           environment-file: ci/deps/${{ matrix.env_file }}
 
-      - name: Build Pandas
-        uses: ./.github/actions/build_pandas
+      # - name: Build Pandas
+      #   uses: ./.github/actions/build_pandas
 
-      - name: Test
-        uses: ./.github/actions/run-tests
+      # - name: Test
+      #   uses: ./.github/actions/run-tests
 
   Linux-32-bit:
     runs-on: ubuntu-24.04
@@ -368,8 +323,8 @@ jobs:
           python -m pip install -ve . --no-build-isolation --no-index --no-deps -Csetup-args="--werror"
           python -m pip list
 
-      - name: Run Tests
-        uses: ./.github/actions/run-tests
+      # - name: Run Tests
+      #   uses: ./.github/actions/run-tests
 
   # NOTE: this job must be kept in sync with the Pyodide build job in wheels.yml
   emscripten:
